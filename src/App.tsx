@@ -11,7 +11,6 @@ const SpotifyProfile: React.FC = () => {
   const [accessToken, setAccessToken] = useState<string | null>(
     localStorage.getItem("access_token") || null
   );
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [playListLink, setPlayListLink] = useState<string>('');
   const [tracks, setTracks] = useState<any | null>();
   const initialRender = useRef(true);
@@ -150,7 +149,6 @@ const SpotifyProfile: React.FC = () => {
           <button type="submit" onClick={handleNextSong}>Next Song</button>
         </div> 
         
-        <a href="http:localhost:5173">Refresh Page</a>
       </div>
     </div>
   );
