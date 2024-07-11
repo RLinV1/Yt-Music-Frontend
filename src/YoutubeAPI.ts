@@ -7,7 +7,7 @@
 // uses https://www.npmjs.com/package/ytmusic-api
 // switch to http:localhost:8080 if running locally on server.ts
 export async function getYtVideos(query: string, songName: string): Promise<any> {
-    return await fetch(`http://localhost:8080/api/ytmusic?q=${query}&songName=${songName}`).
+    return await fetch(`https://yt-music-api-9ivk.onrender.com/api/ytmusic?q=${query}&songName=${songName}`).
     then(data => data.json());
       
 }
