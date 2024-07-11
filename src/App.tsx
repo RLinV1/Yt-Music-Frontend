@@ -7,53 +7,32 @@ import ReactPlayer from 'react-player'
 const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 
 const SpotifyProfile: React.FC = () => {
+
   const [accessToken, setAccessToken] = useState<string | null>(
     localStorage.getItem("access_token") || null
   );
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [playlistId, setPlaylistId] = useState<string>('');
+  const [playListLink, setPlayListLink] = useState<string>('');
   const [tracks, setTracks] = useState<any | null>();
   const initialRender = useRef(true);
+  const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
 
-
+  // calls the spotify api for the fetchProfile
   useEffect(() => {
-    const fetchProfile = async (token: string) => {
-      try {
-        const result = await fetch("https://api.spotify.com/v1/me", {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!result.ok) {
-          if (result.status === 401) {
-            await getRefreshToken();
-          } else {
-            throw new Error(`Failed to fetch profile: ${result.status} ${result.statusText}`);
-          }
-        }
-
-        const profileData = await result.json();
-        setProfile(profileData);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        // Optionally handle error states, e.g., redirect to re-authenticate
-      }
-    };
-
+    // intializes the access token and refresh token
     const initialize = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (accessToken) {
         // Token exists in localStorage, fetch profile
-        fetchProfile(accessToken);
       } else if (code) {
         // Code exists in URL query params, exchange for token
         try {
           const token = await getAccessToken(clientId, code);
           setAccessToken(token);
-          fetchProfile(token);
         } catch (error) {
+          await getRefreshToken();
           console.error("Error getting access token:", error);
           // Optionally handle error states
         }
@@ -66,114 +45,95 @@ const SpotifyProfile: React.FC = () => {
     initialize();
   }, [accessToken]);
 
+  // calls the spotify api based on the playlist id
   const handlePlaylistSubmit = async (e: any) => {
     e.preventDefault();
     if (!accessToken) return;
   
+    const playlistId = playListLink.substring(playListLink.length - 22);
+    let allTracks: any[] = [];
+    let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+  
     try {
-      const result = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!result.ok) {
-        throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
+      while (nextUrl) {
+        const result = await fetch(nextUrl, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+  
+        if (!result.ok) {
+          await getRefreshToken();
+          window.location.reload();
+          throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
+        }
+  
+        const playlistData = await result.json();
+        allTracks = [...allTracks, ...playlistData.items];
+        nextUrl = playlistData.next; // Set nextUrl to the next page URL, or null if there are no more pages
+        // console.log(allTracks);
       }
-      const playlistData = await result.json();
-      setTracks(playlistData.tracks); // Update tracks state
+      console.log(allTracks)
+      setTracks(allTracks); // Update tracks state with all fetched tracks
     } catch (error) {
       console.error('Error fetching playlist:', error);
       // Optionally handle error states
     }
-  };
-
-  const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
-
+  };  
   
+  // if tracks is intialized or changed then we can call the youtube api for videos
   useEffect(() => {
     // Skip initial render effect
     if (initialRender.current) {
       initialRender.current = false;
       return;
     }
+    // console.log(tracks);
+
     handleNextSong();
+    // handleNextSong();
   }, [tracks]);
 
+  // picks a random song from the tracks to pick
   const handleNextSong = () => {
-    const length = tracks.items.length;
+    const length = tracks.length;
     const index = Math.floor(Math.random() * length);
-    const songName = tracks.items[index].track.name;
-    const artistName = tracks.items[index].track.artists[0].name;
-    const query = songName + " by " + artistName;
+    const songName = tracks[index].track.name;
+    const artistName = tracks[index].track.artists[0].name;
+    const query = `${songName} ${artistName}`;
     console.log("Song name: " + songName);
     console.log("Artist name: " + artistName);
-    console.log(query);
-    getYtVideos(query).then((data) => { getYoutubeLink(data, songName, artistName) }).catch();
+    console.log(encodeURI(query));
+    getYtVideos(query, songName).then((data) => { getYoutubeLink(data, songName, artistName) }).catch();
   };
-
-  const getYoutubeLink = (videos: any[], songName: string, artistName: string) => {
+  
+  const getYoutubeLink = (videos: any, songName: string, artistName: string) => {
     console.log(videos);
-    setSongInfo({name: songName, artist: artistName,  youtube_link:`https://youtube.com/watch?v=${videos[0].videoId}`, preview_url: ''})
-  }
- 
-  if (!profile) {
-    return <div>Loading...</div>;
+    setSongInfo({name: songName, artist: artistName,  youtube_link:`https://youtube.com/watch?v=${videos.videoId}`, preview_url: ''})
   }
 
   return (
     <div className="w-screen h-screen overflow-x-hidden">
       <div className="flex flex-col justify-center items-center gap-3">
-        <h1>Spotify Profile</h1>
-        <div>
-          <strong>Name: </strong>
-          <span id="displayName">{profile.display_name}</span>
-        </div>
-        <div>
-          {profile.images && profile.images.length > 0 && (
-            <img id="avatar" src={profile.images[0].url} className="w-32 h-32" alt="avatar" />
-          )}
-        </div>
-        <div>
-          <strong>ID: </strong>
-          <span id="id">{profile.id}</span>
-        </div>
-        <div>
-          <strong>Email: </strong>
-          <span id="email">{profile.email}</span>
-        </div>
-        <div>
-          <strong>URI: </strong>
-          <a id="uri" href={profile.external_urls.spotify}>
-            {profile.uri}
-          </a>
-        </div>
-        <div>
-          <strong>URL: </strong>
-          <a id="url" href={profile.href}>
-            {profile.href}
-          </a>
-        </div>
-        <div>
-          <strong>Image URL: </strong>
-          {profile.images && profile.images.length > 0 && (
-            <span id="imgUrl">{profile.images[0].url}</span>
-          )}
-        </div>
+        
 
         <div className="flex flex-col justify-center items-center py-4 gap-5">
           <h2 className="text-2xl">Fetch Playlist</h2>
           <form onSubmit={handlePlaylistSubmit} className="flex flex-col justify-center items-center gap-3">
-              <span className="text-xl">Playlist Id:</span>
+              <span className="text-xl">Enter Playlist Link</span>
               <input
                 type="text"
-                value={playlistId}
-                onChange={(e) => setPlaylistId(e.target.value)}
+                value={playListLink}
+                onChange={(e) => setPlayListLink(e.target.value)}
                 required
                 className="w-96 h-full text-center bg-white text-black"
-                placeholder="Playlist Id"
+                placeholder="Spotify Playlist Link"
               />
             <button type="submit">Fetch Playlist</button>
           </form>
         </div>
+        {!songInfo && (
+          <div>Loading... It might take a while</div>
+        )}
         {songInfo  && (
           <div className="flex w-full h-full flex-col items-center justify-center gap-10 text-center my-3 " key={1}>
             <div className="flex flex-col gap-3"> 
@@ -185,9 +145,12 @@ const SpotifyProfile: React.FC = () => {
             <ReactPlayer playing={true} controls={true} url={songInfo.youtube_link}/>
           </div>
         )}
+
         <div>
           <button type="submit" onClick={handleNextSong}>Next Song</button>
         </div> 
+        
+        <a href="http:localhost:5173">Refresh Page</a>
       </div>
     </div>
   );
