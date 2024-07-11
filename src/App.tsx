@@ -62,7 +62,7 @@ const SpotifyProfile: React.FC = () => {
   
         if (!result.ok) {
           await getRefreshToken();
-          window.location.reload();
+          handlePlaylistSubmit();
           throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
         }
   
