@@ -24,7 +24,7 @@ const SpotifyProfile: React.FC = () => {
         console.log(result);
       } catch (error) {
         await getRefreshToken();
-        window.location.reload();
+        location.reload();
       }
     };
 
