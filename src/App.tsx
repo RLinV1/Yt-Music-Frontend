@@ -107,7 +107,7 @@ const SpotifyProfile: React.FC = () => {
     const index = Math.floor(Math.random() * tracks.length);
     const songName = tracks[index].track.name;
     const artistName = tracks[index].track.artists[0].name;
-    const query = `${songName} ${artistName}`;
+    const query = `${songName}`;
     getYtVideos(query, songName, artistName).then(data => getYoutubeLink(data, songName, artistName)).catch(console.error);
   };
 
