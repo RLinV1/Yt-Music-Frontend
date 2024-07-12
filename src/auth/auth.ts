@@ -53,4 +53,43 @@ async function generateCodeChallenge(codeVerifier: string) {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 }
+export const getRefreshToken = async () => {
+  const refreshToken = localStorage.getItem('refresh_token');
+  const url = "https://accounts.spotify.com/api/token";
+  const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+
+  const payload: RequestInit = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId
+    }).toString()
+  };
+
+  try {
+    const body = await fetch(url, payload);
+    if (!body.ok) {
+      throw new Error(`Failed to refresh token: ${body.status} ${body.statusText}`);
+    }
+    const response = await body.json();
+
+    localStorage.setItem('access_token', response.access_token);
+    localStorage.setItem('refresh_token', response.refresh_token);
+    console.log("Token refreshed successfully.");
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.reload();
+    throw error;
+  }
+};
 
