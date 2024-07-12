@@ -41,6 +41,9 @@ export const getRefreshToken = async () => {
     console.log("Token refreshed successfully.");
   } catch (error) {
     console.error("Error refreshing token:", error);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.reload();
     throw error; // Re-throw error to be handled by caller
   }
 };
@@ -65,6 +68,13 @@ const SpotifyProfile: React.FC = () => {
 
       if (accessToken) {
         // Token exists in localStorage, fetch profile
+        try {
+          const result = await fetch("https://api.spotify.com/v1/me", {
+            method: "GET", headers: { Authorization: `Bearer ${accessToken}` }
+          });
+        } catch (error) {
+          await getRefreshToken();
+        }
       } else if (code) {
         // Code exists in URL query params, exchange for token
         try {
