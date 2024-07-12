@@ -4,7 +4,10 @@ import { getYtVideos } from "./YoutubeAPI";
 import ReactPlayer from 'react-player'
 
 
-  const getRefreshToken = async () => {
+
+const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+
+const getRefreshToken = async () => {
 
    // refresh token that has been previously stored
    const refreshToken = localStorage.getItem('refresh_token');
@@ -27,9 +30,6 @@ import ReactPlayer from 'react-player'
     localStorage.setItem('access_token', response.accessToken);
     localStorage.setItem('refresh_token', response.refreshToken);
 }
-
-const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-
 const SpotifyProfile: React.FC = () => {
 
   const [accessToken, setAccessToken] = useState<string | null>(
