@@ -122,7 +122,7 @@ const SpotifyProfile: React.FC = () => {
     if (!songInfo?.youtube_link) {
       return;
     }
-    const response = await fetch(`http://localhost:8080/api/download?url=${songInfo.youtube_link}`);
+    const response = await fetch(`https://yt-music-api-9ivk.onrender.com/api/download?url=${songInfo.youtube_link}`);
     
     if (!response.ok) {
         console.error('Failed to download video');
