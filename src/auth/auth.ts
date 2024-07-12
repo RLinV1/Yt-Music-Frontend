@@ -1,9 +1,7 @@
 export async function redirectToAuthCodeFlow(clientId: string) {
     const verifier = generateCodeVerifier(128);
     const challenge = await generateCodeChallenge(verifier);
-    
-    // Store verifier in a variable or state instead of localStorage
-    sessionStorage.setItem("verifier", verifier);
+    localStorage.setItem("verifier", verifier);
 
     const params = new URLSearchParams();
     params.append("client_id", clientId);
@@ -17,8 +15,8 @@ export async function redirectToAuthCodeFlow(clientId: string) {
 }
 
 export async function getAccessToken(clientId: string, code: string) {
-    const verifier = sessionStorage.getItem("verifier");
-    
+    const verifier = localStorage.getItem("verifier");
+
     const params = new URLSearchParams();
     params.append("client_id", clientId);
     params.append("grant_type", "authorization_code");
@@ -32,12 +30,35 @@ export async function getAccessToken(clientId: string, code: string) {
         body: params
     });
     const response = await result.json();
-
-    return response;
+    localStorage.setItem("access_token", response.access_token);
+    localStorage.setItem("refresh_token", response.refresh_token);
+    return response.access_token;
 }
 
-export const getRefreshToken = async (clientId: string, refreshToken: string) => {
+function generateCodeVerifier(length: number) {
+    let text = '';
+    let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+    for (let i = 0; i < length; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+async function generateCodeChallenge(codeVerifier: string) {
+    const data = new TextEncoder().encode(codeVerifier);
+    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
+export const getRefreshToken = async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
     const url = "https://accounts.spotify.com/api/token";
+    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+
     const payload = {
         method: 'POST',
         headers: {
@@ -45,16 +66,22 @@ export const getRefreshToken = async (clientId: string, refreshToken: string) =>
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
-            refresh_token: refreshToken,
+            refresh_token: refreshToken || '',
             client_id: clientId
         })
     };
 
-    const response = await fetch(url, payload);
-    if (!response.ok) {
-        throw new Error(`Failed to refresh token: ${response.status} ${response.statusText}`);
-    }
+    try {
+        const response = await fetch(url, payload);
+        if (!response.ok) {
+            throw new Error(`Failed to refresh token: ${response.status} ${response.statusText}`);
+        }
 
-    const data = await response.json();
-    return data;
+        const data = await response.json();
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        console.log("Token refreshed successfully.");
+    } catch (error) {
+        console.error("Error refreshing token:", error);
+    }
 };
