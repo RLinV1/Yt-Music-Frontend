@@ -37,7 +37,7 @@ const SpotifyProfile: React.FC = () => {
     const initialize = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-
+      
       if (accessToken) {
         // Token exists in localStorage, fetch profile
       } else if (code) {
@@ -47,6 +47,7 @@ const SpotifyProfile: React.FC = () => {
           window.location.reload(); // Reload after getting the access token
         } catch (error) {
           await getRefreshToken();
+          window.location.reload(); // Reload after getting the access token
           console.error("Error getting access token:", error);
         }
       } else {
