@@ -118,7 +118,27 @@ const SpotifyProfile: React.FC = () => {
       preview_url: '',
     });
   };
+  const handleDownload = async () => {
+    if (!songInfo?.youtube_link) {
+      return;
+    }
+    const response = await fetch(`http://localhost:8080/api/download?url=${songInfo.youtube_link}`);
+    
+    if (!response.ok) {
+        console.error('Failed to download video');
+        return;
+    }
 
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'video.mp4'; // You can set a different filename here
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+};
   return (
     <div className="w-screen h-screen overflow-x-hidden">
       <div className="flex flex-col justify-center items-center gap-3">
@@ -151,6 +171,9 @@ const SpotifyProfile: React.FC = () => {
         )}
         <div>
           <button type="button" onClick={handleNextSong}>Next Song</button>
+        </div>
+        <div>
+          <button type="submit" onClick={handleDownload}>Download MP3</button>
         </div>
       </div>
     </div>
