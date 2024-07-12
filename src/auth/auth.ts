@@ -59,13 +59,15 @@ async function generateCodeChallenge(codeVerifier: string) {
 }
 export const getRefreshToken = async () => {
     const refreshToken = localStorage.getItem('refresh_token');
+    const url = "https://accounts.spotify.com/api/token";
+    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+
     if (!refreshToken) {
-        console.error("No refresh token found.");
+        console.error("No refresh token found. Redirecting to authentication.");
+        redirectToAuthCodeFlow(clientId);
         return;
     }
 
-    const url = "https://accounts.spotify.com/api/token";
-    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID; 
     const payload = {
         method: 'POST',
         headers: {
@@ -90,6 +92,7 @@ export const getRefreshToken = async () => {
         console.log("Token refreshed successfully.");
     } catch (error) {
         console.error("Error refreshing token:", error);
-        // Optionally handle re-authentication
+        redirectToAuthCodeFlow(clientId);
     }
 };
+
