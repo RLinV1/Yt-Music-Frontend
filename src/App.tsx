@@ -72,6 +72,7 @@ const SpotifyProfile: React.FC = () => {
           const result = await fetch("https://api.spotify.com/v1/me", {
             method: "GET", headers: { Authorization: `Bearer ${accessToken}` }
           });
+          console.log(result);
         } catch (error) {
           await getRefreshToken();
         }
