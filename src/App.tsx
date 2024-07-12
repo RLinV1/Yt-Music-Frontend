@@ -10,7 +10,7 @@ const SpotifyProfile: React.FC = () => {
         localStorage.getItem("access_token") || null
     );
     const [playListLink, setPlayListLink] = useState<string>('');
-    const [tracks, setTracks] = useState<any | null>(null);
+    const [tracks, setTracks] = useState<any | null>();
     const initialRender = useRef(true);
     const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
 
@@ -20,14 +20,14 @@ const SpotifyProfile: React.FC = () => {
             const code = params.get("code");
 
             if (accessToken) {
-                // Token exists in localStorage, fetch profile
+                // Token exists, fetch profile or perform actions
             } else if (code) {
                 try {
                     const token = await getAccessToken(clientId, code);
                     setAccessToken(token);
                 } catch (error) {
-                    await getRefreshToken();
                     console.error("Error getting access token:", error);
+                    await getRefreshToken();
                 }
             } else {
                 redirectToAuthCodeFlow(clientId);
@@ -41,7 +41,7 @@ const SpotifyProfile: React.FC = () => {
         if (e) e.preventDefault();
         if (!accessToken) return;
 
-        const playlistId = playListLink.substring(playListLink.length - 22);
+        const playlistId = playListLink.split('/').pop();
         let allTracks: any[] = [];
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
 
@@ -54,11 +54,6 @@ const SpotifyProfile: React.FC = () => {
 
                 if (!result.ok) {
                     if (!retry) {
-                        if (result.status === 401) {
-                            console.error("Access token is invalid. Redirecting to re-authenticate.");
-                            redirectToAuthCodeFlow(clientId);
-                            return;
-                        }
                         await getRefreshToken();
                         const newAccessToken = localStorage.getItem("access_token");
                         if (newAccessToken) setAccessToken(newAccessToken);
@@ -96,7 +91,7 @@ const SpotifyProfile: React.FC = () => {
         console.log(query);
         getYtVideos(query, songName, artistName).then((data) => {
             getYoutubeLink(data, songName, artistName);
-        }).catch(console.error);
+        }).catch();
     };
 
     const getYoutubeLink = (videos: any, songName: string, artistName: string) => {
@@ -142,7 +137,7 @@ const SpotifyProfile: React.FC = () => {
                     </div>
                 )}
                 <div>
-                    <button type="button" onClick={handleNextSong}>Next Song</button>
+                    <button type="submit" onClick={handleNextSong}>Next Song</button>
                 </div>
             </div>
         </div>
