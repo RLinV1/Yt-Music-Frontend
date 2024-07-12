@@ -16,13 +16,16 @@ Download Option For YT Videos?
 
 ## Concerns/Questions?
 Q: It played the wrong song! 
+
 A: I'm really sorry but I can't account for the error that yt-music-api package has as it's not entirely super accurate. I tried to fix it by doing better search queries but some discrepancies just seem 
    get bypassed
 
 Q: Why is my window reloading so much?
+
 A: It's the spotify api. It seems everytime the refresh token is expired i need to clear the cache but that requires a refresh to enable my changes.
 
 Q: Are you going to continue working on this project?
+
 A: Most likely not unless I'm super motivated.
 
 ## How To Clone
