@@ -88,6 +88,7 @@ export const getRefreshToken = async () => {
     console.error("Error refreshing token:", error);
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    location.reload();
     throw error;
   }
 };
