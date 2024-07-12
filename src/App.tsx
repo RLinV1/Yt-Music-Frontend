@@ -14,7 +14,6 @@ const SpotifyProfile: React.FC = () => {
   const initialRender = useRef(true);
   const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
 
-  // Initialize the access token and refresh token
   useEffect(() => {
     const initialize = async () => {
       const params = new URLSearchParams(window.location.search);
@@ -38,19 +37,17 @@ const SpotifyProfile: React.FC = () => {
     initialize();
   }, [accessToken]);
 
-  // Handle token errors and refresh tokens
   const handleTokenError = async () => {
     try {
-      const newToken = await getRefreshToken();
+      const newToken = await getRefreshToken(); // Ensure this returns a string
+      localStorage.setItem("access_token", newToken);
       setAccessToken(newToken);
     } catch (error) {
       console.error("Error refreshing token:", error);
-      // Optionally redirect to auth flow again
       redirectToAuthCodeFlow(clientId);
     }
   };
 
-  // Fetch Spotify playlist based on the playlist link
   const handlePlaylistSubmit = async (e?: any, retry = false) => {
     if (e) e.preventDefault();
     if (!accessToken) return;
@@ -69,7 +66,7 @@ const SpotifyProfile: React.FC = () => {
         if (!result.ok) {
           if (!retry) {
             await handleTokenError();
-            return handlePlaylistSubmit(e, true); // Retry after refreshing token
+            return handlePlaylistSubmit(e, true);
           } else {
             throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
           }
@@ -85,7 +82,6 @@ const SpotifyProfile: React.FC = () => {
     }
   };
 
-  // Fetch videos when tracks change
   useEffect(() => {
     if (initialRender.current) {
       initialRender.current = false;
@@ -94,7 +90,6 @@ const SpotifyProfile: React.FC = () => {
     handleNextSong();
   }, [tracks]);
 
-  // Pick a random song from the tracks
   const handleNextSong = () => {
     if (!tracks || tracks.length === 0) return;
     const index = Math.floor(Math.random() * tracks.length);
