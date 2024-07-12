@@ -1,42 +1,36 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getRefreshToken, redirectToAuthCodeFlow, getAccessToken } from "./auth/auth";
 import { getYtVideos } from "./YoutubeAPI";
-import ReactPlayer from 'react-player'
-
+import ReactPlayer from 'react-player';
 
 const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 
 const SpotifyProfile: React.FC = () => {
-
   const [accessToken, setAccessToken] = useState<string | null>(
     localStorage.getItem("access_token") || null
   );
   const [playListLink, setPlayListLink] = useState<string>('');
-  const [tracks, setTracks] = useState<any | null>();
+  const [tracks, setTracks] = useState<any | null>(null);
   const initialRender = useRef(true);
   const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
 
-  // calls the spotify api for the fetchProfile
+  // Initialize the access token and refresh token
   useEffect(() => {
-    // intializes the access token and refresh token
     const initialize = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (accessToken) {
-        // Token exists in localStorage, fetch profile
+        // Token exists, fetch profile or other actions as needed
       } else if (code) {
-        // Code exists in URL query params, exchange for token
         try {
           const token = await getAccessToken(clientId, code);
           setAccessToken(token);
         } catch (error) {
-          await getRefreshToken();
           console.error("Error getting access token:", error);
-          // Optionally handle error states
+          await handleTokenError();
         }
       } else {
-        // Neither token nor code exists, redirect to auth flow
         redirectToAuthCodeFlow(clientId);
       }
     };
@@ -44,7 +38,19 @@ const SpotifyProfile: React.FC = () => {
     initialize();
   }, [accessToken]);
 
-  // calls the spotify api based on the playlist id
+  // Handle token errors and refresh tokens
+  const handleTokenError = async () => {
+    try {
+      const newToken = await getRefreshToken();
+      setAccessToken(newToken);
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      // Optionally redirect to auth flow again
+      redirectToAuthCodeFlow(clientId);
+    }
+  };
+
+  // Fetch Spotify playlist based on the playlist link
   const handlePlaylistSubmit = async (e?: any, retry = false) => {
     if (e) e.preventDefault();
     if (!accessToken) return;
@@ -62,10 +68,8 @@ const SpotifyProfile: React.FC = () => {
 
         if (!result.ok) {
           if (!retry) {
-            await getRefreshToken();
-            const newAccessToken = localStorage.getItem("access_token");
-            if (newAccessToken) setAccessToken(newAccessToken);
-            return handlePlaylistSubmit(e, true); // Retry once after refreshing token
+            await handleTokenError();
+            return handlePlaylistSubmit(e, true); // Retry after refreshing token
           } else {
             throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
           }
@@ -73,18 +77,16 @@ const SpotifyProfile: React.FC = () => {
 
         const playlistData = await result.json();
         allTracks = [...allTracks, ...playlistData.items];
-        nextUrl = playlistData.next; // Set nextUrl to the next page URL, or null if there are no more pages
+        nextUrl = playlistData.next;
       }
-      setTracks(allTracks); // Update tracks state with all fetched tracks
+      setTracks(allTracks);
     } catch (error) {
       console.error('Error fetching playlist:', error);
-      // Optionally handle error states
     }
   };
 
-  // if tracks is intialized or changed then we can call the youtube api for videos
+  // Fetch videos when tracks change
   useEffect(() => {
-    // Skip initial render effect
     if (initialRender.current) {
       initialRender.current = false;
       return;
@@ -92,22 +94,24 @@ const SpotifyProfile: React.FC = () => {
     handleNextSong();
   }, [tracks]);
 
-  // picks a random song from the tracks to pick
+  // Pick a random song from the tracks
   const handleNextSong = () => {
     if (!tracks || tracks.length === 0) return;
-    const length = tracks.length;
-    const index = Math.floor(Math.random() * length);
+    const index = Math.floor(Math.random() * tracks.length);
     const songName = tracks[index].track.name;
     const artistName = tracks[index].track.artists[0].name;
     const query = `${songName} ${artistName}`;
-    console.log(query);
-    getYtVideos(query, songName, artistName).then((data) => { getYoutubeLink(data, songName, artistName) }).catch();
+    
+    getYtVideos(query, songName, artistName).then((data) => {
+      getYoutubeLink(data, songName, artistName);
+    }).catch(error => {
+      console.error("Error fetching YouTube videos:", error);
+    });
   };
 
   const getYoutubeLink = (videos: any, songName: string, artistName: string) => {
-    console.log(videos);
     setSongInfo({ name: songName, artist: artistName, youtube_link: `https://youtube.com/watch?v=${videos.videoId}`, preview_url: '' });
-  }
+  };
 
   return (
     <div className="w-screen h-screen overflow-x-hidden">
@@ -142,7 +146,7 @@ const SpotifyProfile: React.FC = () => {
           </div>
         )}
         <div>
-          <button type="submit" onClick={handleNextSong}>Next Song</button>
+          <button type="button" onClick={handleNextSong}>Next Song</button>
         </div>
       </div>
     </div>
