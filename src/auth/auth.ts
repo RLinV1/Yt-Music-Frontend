@@ -58,8 +58,12 @@ async function generateCodeChallenge(codeVerifier: string) {
         .replace(/=+$/, '');
 }
 export const getRefreshToken = async () => {
-    // Refresh token that has been previously stored
     const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+        console.error("No refresh token found.");
+        return;
+    }
+
     const url = "https://accounts.spotify.com/api/token";
     const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID; 
     const payload = {
@@ -69,7 +73,7 @@ export const getRefreshToken = async () => {
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
-            refresh_token: refreshToken || '',
+            refresh_token: refreshToken,
             client_id: clientId
         })
     };
@@ -83,10 +87,9 @@ export const getRefreshToken = async () => {
         const data = await response.json();
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
-
         console.log("Token refreshed successfully.");
     } catch (error) {
         console.error("Error refreshing token:", error);
-        // Handle error as needed, e.g., redirect to re-authenticate
+        // Optionally handle re-authentication
     }
 };
