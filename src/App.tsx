@@ -1,9 +1,40 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getRefreshToken, redirectToAuthCodeFlow, getAccessToken } from "./auth/auth";
+import { redirectToAuthCodeFlow, getAccessToken } from "./auth/auth";
 import { getYtVideos } from "./YoutubeAPI";
 import ReactPlayer from 'react-player'
 
 
+const getRefreshToken = async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    const url = "https://accounts.spotify.com/api/token";
+    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+
+    const payload = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken || '',
+            client_id: clientId
+        })
+    };
+
+    try {
+        const response = await fetch(url, payload);
+        if (!response.ok) {
+            throw new Error(`Failed to refresh token: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        console.log("Token refreshed successfully.");
+    } catch (error) {
+        console.error("Error refreshing token:", error);
+    }
+};
 const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 
 const SpotifyProfile: React.FC = () => {
