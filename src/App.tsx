@@ -59,6 +59,16 @@ const SpotifyProfile: React.FC = () => {
   const initialRender = useRef(true);
   const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
 
+  useEffect(() => {
+     try {
+          const result = await fetch("https://api.spotify.com/v1/me", {
+            method: "GET", headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          console.log(result);
+        } catch (error) {
+          await getRefreshToken();
+        }
+  }, []);
   // calls the spotify api for the fetchProfile
   useEffect(() => {
     // intializes the access token and refresh token
@@ -68,14 +78,6 @@ const SpotifyProfile: React.FC = () => {
 
       if (accessToken) {
         // Token exists in localStorage, fetch profile
-        try {
-          const result = await fetch("https://api.spotify.com/v1/me", {
-            method: "GET", headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          console.log(result);
-        } catch (error) {
-          await getRefreshToken();
-        }
       } else if (code) {
         // Code exists in URL query params, exchange for token
         try {
