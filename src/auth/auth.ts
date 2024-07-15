@@ -84,6 +84,7 @@ export const getRefreshToken = async () => {
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('refresh_token', response.refresh_token);
     console.log("Token refreshed successfully.");
+    location.reload();
   } catch (error) {
     console.error("Error refreshing token:", error);
     localStorage.removeItem('access_token');
