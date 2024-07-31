@@ -21,10 +21,15 @@ const SpotifyProfile: React.FC = () => {
           method: "GET",
           headers: { Authorization: `Bearer ${accessToken}` }
         });
-        console.log(result);
+        if (result.ok) {
+          // Handle the profile data if needed
+          console.log(await result.json());
+        } else {
+          throw new Error(`Failed to fetch profile: ${result.status} ${result.statusText}`);
+        }
       } catch (error) {
-        await getRefreshToken();
-        location.reload();
+        console.error("Error fetching profile:", error);
+        await handleTokenRefresh();
       }
     };
 
@@ -39,14 +44,15 @@ const SpotifyProfile: React.FC = () => {
       const code = params.get("code");
       
       if (accessToken) {
-        // Token exists in localStorage, fetch profile
+        // Token exists, no need to redirect
       } else if (code) {
         try {
           const token = await getAccessToken(clientId, code);
           setAccessToken(token);
+          localStorage.setItem('access_token', token);
         } catch (error) {
-          await getRefreshToken();
           console.error("Error getting access token:", error);
+          await handleTokenRefresh();
         }
       } else {
         redirectToAuthCodeFlow(clientId);
@@ -56,15 +62,28 @@ const SpotifyProfile: React.FC = () => {
     initialize();
   }, [accessToken]);
 
-  addEventListener("storage", (event) => {
-    setAccessToken(localStorage.getItem("access_token");
-  });
+  const handleTokenRefresh = async () => {
+    try {
+      await getRefreshToken();
+      const newAccessToken = localStorage.getItem("access_token");
+      if (newAccessToken) setAccessToken(newAccessToken);
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      localStorage.removeItem("access_token");
+      setAccessToken(null);
+    }
+  };
 
   const handlePlaylistSubmit = async (e?: React.FormEvent<HTMLFormElement>, retry = false) => {
     if (e) e.preventDefault();
     if (!accessToken) return;
 
     const playlistId = playListLink.split('/').pop();
+    if (!playlistId) {
+      console.error("Invalid playlist link");
+      return;
+    }
+
     let allTracks: any[] = [];
     let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
 
@@ -77,9 +96,7 @@ const SpotifyProfile: React.FC = () => {
 
         if (!result.ok) {
           if (!retry) {
-            await getRefreshToken();
-            const newAccessToken = localStorage.getItem("access_token");
-            if (newAccessToken) setAccessToken(newAccessToken);
+            await handleTokenRefresh();
             return handlePlaylistSubmit(e, true);
           } else {
             throw new Error(`Failed to fetch playlist: ${result.status} ${result.statusText}`);
@@ -111,8 +128,6 @@ const SpotifyProfile: React.FC = () => {
     const artistName = tracks[index].track.artists[0].name;
     const query = `${songName} by ${artistName}`;
     console.log(query);
-    console.log(songName);
-    console.log(artistName);
     getYtVideos(query, songName, artistName).then(data => getYoutubeLink(data, songName, artistName)).catch(console.error);
   };
 
@@ -124,8 +139,10 @@ const SpotifyProfile: React.FC = () => {
       preview_url: '',
     });
   };
+
   const handleDownload = async () => {
     if (!songInfo?.youtube_link) {
+      console.error('No song info available for download');
       return;
     }
     const response = await fetch(`https://yt-music-api-9ivk.onrender.com/api/download?url=${songInfo.youtube_link}`);
@@ -144,7 +161,8 @@ const SpotifyProfile: React.FC = () => {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-};
+  };
+
   return (
     <div className="w-screen h-screen overflow-x-hidden">
       <div className="flex flex-col justify-center items-center gap-3">
@@ -179,7 +197,7 @@ const SpotifyProfile: React.FC = () => {
           <button type="button" onClick={handleNextSong}>Next Song</button>
         </div>
         <div>
-          <button type="submit" onClick={handleDownload}>Download MP3</button>
+          <button type="button" onClick={handleDownload}>Download MP3</button>
         </div>
       </div>
     </div>
