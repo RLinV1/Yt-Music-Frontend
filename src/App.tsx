@@ -44,10 +44,8 @@ const SpotifyProfile: React.FC = () => {
         try {
           const token = await getAccessToken(clientId, code);
           setAccessToken(token);
-          window.location.reload(); // Reload after getting the access token
         } catch (error) {
           await getRefreshToken();
-          window.location.reload(); // Reload after getting the access token
           console.error("Error getting access token:", error);
         }
       } else {
@@ -57,6 +55,10 @@ const SpotifyProfile: React.FC = () => {
 
     initialize();
   }, [accessToken]);
+
+  addEventListener("storage", (event) => {
+    setAccessToken(localStorage.getItem("access_token");
+  });
 
   const handlePlaylistSubmit = async (e?: React.FormEvent<HTMLFormElement>, retry = false) => {
     if (e) e.preventDefault();
